@@ -13,7 +13,7 @@ use std::collections::{HashMap, HashSet};
 
 /// JSON-LD serializer engine
 pub struct Engine<'a, L> {
-    options: &'a JsonLdOptions<L>,
+    options: &'a JsonLdOptions<'a, L>,
     // Map GsIds to index
     index: HashMap<(Box<str>, Box<str>), usize>,
     // Maps index to their graph_id (" " for default graph) and node_id

@@ -1,6 +1,6 @@
 //! A JSON-LD parser based on Thimothée Haudebourg's [`json_ld`] crate.
 
-use std::{fmt::Display, io::BufRead, ops::DerefMut, sync::Arc};
+use std::{fmt::Display, io::BufRead, sync::Arc};
 
 use json_ld::{JsonLdProcessor, Loader, RemoteDocument, ToRdfError};
 use json_syntax::{Parse, Value};
@@ -30,17 +30,17 @@ mod test;
 ///
 /// * the generic parameter `L` is the type of the [document loader](`json_ld::Loader`)
 ///   (determined by the `options` parameters)
-pub struct JsonLdParser<L = NoLoader> {
-    options: JsonLdOptions<L>,
+pub struct JsonLdParser<'lf, L = NoLoader> {
+    options: JsonLdOptions<'lf, L>,
 }
 
-impl Default for JsonLdParser<NoLoader> {
+impl<'lf> Default for JsonLdParser<'lf, NoLoader> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl JsonLdParser<NoLoader> {
+impl<'lf> JsonLdParser<'lf, NoLoader> {
     /// Make a new [`JsonLdParser`] with the default options
     pub fn new() -> Self {
         JsonLdParser {
@@ -49,9 +49,9 @@ impl JsonLdParser<NoLoader> {
     }
 }
 
-impl<L> JsonLdParser<L> {
+impl<'lf, L> JsonLdParser<'lf, L> {
     /// Make a new [`JsonLdParser`] with the given options
-    pub fn new_with_options(options: JsonLdOptions<L>) -> Self {
+    pub fn new_with_options(options: JsonLdOptions<'lf, L>) -> Self {
         JsonLdParser { options }
     }
 
@@ -77,18 +77,15 @@ impl<L> JsonLdParser<L> {
             Span::default(),
         );
         let mut generator = rdf_types::generator::Blank::new().with_metadata(gen_loc);
-        let mut g_loader = match self.options.document_loader() {
-            Ok(g) => g,
-            Err(err) => return JsonLdQuadSource::from_err(err),
-        };
-        let loader = g_loader.deref_mut();
+        let mut loader = self.options.document_loader();
         let mut vocab = ArcVoc {};
         let options = self.options.inner().clone();
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("Could not build tokio runtime");
-        match rt.block_on(data.to_rdf_with_using(&mut vocab, &mut generator, loader, options)) {
+        match rt.block_on(data.to_rdf_with_using(&mut vocab, &mut generator, &mut loader, options))
+        {
             Err(ToRdfError::Expand(err)) => JsonLdQuadSource::from_err(err),
             Ok(mut to_rdf) => JsonLdQuadSource::Quads(
                 to_rdf
@@ -101,7 +98,7 @@ impl<L> JsonLdParser<L> {
     }
 }
 
-impl<B: BufRead, L> QuadParser<B> for JsonLdParser<L>
+impl<'lf, B: BufRead, L> QuadParser<B> for JsonLdParser<'lf, L>
 where
     L: Loader<ArcIri, Location<ArcIri>>
         + json_ld::ContextLoader<ArcIri, Location<ArcIri>>
@@ -147,4 +144,12 @@ where
     }
 }
 
-sophia_api::def_mod_functions_for_bufread_parser!(JsonLdParser, QuadParser);
+/// Convenience function for parsing a BufRead with the default parser.
+pub fn parse_bufread<B: std::io::BufRead>(bufread: B) -> JsonLdQuadSource {
+    JsonLdParser::default().parse(bufread)
+}
+
+/// Convenience function for parsing a str with the default parser.
+pub fn parse_str(txt: &str) -> JsonLdQuadSource {
+    JsonLdParser::default().parse_str(txt)
+}

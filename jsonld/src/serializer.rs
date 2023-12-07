@@ -23,12 +23,12 @@ mod test;
 ///
 /// * the generic parameter `W` is the output type of the serializer (typically a [`std::io::Write`])
 /// * the generic parameter `L` is the type of the [document loader](`json_ld::Loader`)
-pub struct JsonLdSerializer<W, L = NoLoader> {
-    options: JsonLdOptions<L>,
+pub struct JsonLdSerializer<'lf, W, L = NoLoader> {
+    options: JsonLdOptions<'lf, L>,
     target: W,
 }
 
-impl<W> JsonLdSerializer<W> {
+impl<'lf, W> JsonLdSerializer<'lf, W> {
     /// Build a new JSON-LD serializer with the default options (no document loader).
     #[inline]
     pub fn new(target: W) -> Self {
@@ -36,9 +36,9 @@ impl<W> JsonLdSerializer<W> {
     }
 }
 
-impl<W, L> JsonLdSerializer<W, L> {
+impl<'lf, W, L> JsonLdSerializer<'lf, W, L> {
     /// Build a new JSON-LD serializer writing to `write`, with the given options.
-    pub fn new_with_options(target: W, options: JsonLdOptions<L>) -> Self {
+    pub fn new_with_options(target: W, options: JsonLdOptions<'lf, L>) -> Self {
         JsonLdSerializer { target, options }
     }
 
@@ -61,7 +61,7 @@ impl<W, L> JsonLdSerializer<W, L> {
     }
 }
 
-impl<W, L> QuadSerializer for JsonLdSerializer<W, L>
+impl<'lf, W, L> QuadSerializer for JsonLdSerializer<'lf, W, L>
 where
     W: std::io::Write,
 {
@@ -101,7 +101,7 @@ where
 ///
 /// * the generic parameter `L` is the type of the [document loader](`json_ld::Loader`)
 ///   (determined by the `options` parameters)
-pub type Jsonifier<L = NoLoader> = JsonLdSerializer<JsonTarget, L>;
+pub type Jsonifier<'lf, L = NoLoader> = JsonLdSerializer<'lf, JsonTarget, L>;
 
 /// This type is just a placeholder [`JsonLdSerializer`]
 /// targetting a [`JsonValue`].
@@ -112,7 +112,7 @@ pub type Jsonifier<L = NoLoader> = JsonLdSerializer<JsonTarget, L>;
 #[derive(Clone, Debug)]
 pub struct JsonTarget(JsonValue<()>);
 
-impl Jsonifier {
+impl<'lf> Jsonifier<'lf> {
     /// Create a new serializer which targets a [`JsonValue`].
     #[inline]
     pub fn new_jsonifier() -> Self {
@@ -120,10 +120,10 @@ impl Jsonifier {
     }
 }
 
-impl<L> Jsonifier<L> {
+impl<'lf, L> Jsonifier<'lf, L> {
     /// Create a new serializer which targets a [`JsonValue`] with a custom options.
     #[inline]
-    pub fn new_jsonifier_with_options(options: JsonLdOptions<L>) -> Self {
+    pub fn new_jsonifier_with_options(options: JsonLdOptions<'lf, L>) -> Self {
         JsonLdSerializer::new_with_options(JsonTarget(JsonValue::Null), options)
     }
 
@@ -142,7 +142,7 @@ impl<L> Jsonifier<L> {
     }
 }
 
-impl<L> QuadSerializer for Jsonifier<L> {
+impl<'lf, L> QuadSerializer for Jsonifier<'lf, L> {
     type Error = JsonLdError;
 
     fn serialize_quads<QS>(&mut self, source: QS) -> StreamResult<&mut Self, QS::Error, Self::Error>
@@ -160,9 +160,9 @@ impl<L> QuadSerializer for Jsonifier<L> {
 ///
 /// * the generic parameter `L` is the type of the [document loader](`json_ld::Loader`)
 ///   (determined by the `options` parameters)
-pub type JsonLdStringifier<L = NoLoader> = JsonLdSerializer<Vec<u8>, L>;
+pub type JsonLdStringifier<'lf, L = NoLoader> = JsonLdSerializer<'lf, Vec<u8>, L>;
 
-impl JsonLdStringifier<NoLoader> {
+impl<'lf> JsonLdStringifier<'lf, NoLoader> {
     /// Create a new serializer which targets a string.
     #[inline]
     pub fn new_stringifier() -> Self {
@@ -170,15 +170,15 @@ impl JsonLdStringifier<NoLoader> {
     }
 }
 
-impl<L> JsonLdStringifier<L> {
+impl<'lf, L> JsonLdStringifier<'lf, L> {
     /// Create a new serializer which targets a string with a custom options.
     #[inline]
-    pub fn new_stringifier_with_options(options: JsonLdOptions<L>) -> Self {
+    pub fn new_stringifier_with_options(options: JsonLdOptions<'lf, L>) -> Self {
         JsonLdSerializer::new_with_options(Vec::new(), options)
     }
 }
 
-impl<L> Stringifier for JsonLdStringifier<L> {
+impl<'lf, L> Stringifier for JsonLdStringifier<'lf, L> {
     fn as_utf8(&self) -> &[u8] {
         &self.target[..]
     }

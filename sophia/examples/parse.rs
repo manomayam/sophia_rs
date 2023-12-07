@@ -64,13 +64,16 @@ fn main() {
         "json-ld" | "jsonld" => {
             let options = JsonLdOptions::new()
                 .with_base(base.clone().unwrap().map_unchecked(std::sync::Arc::from));
-            let loader: sophia::jsonld::loader::FileUrlLoader = Default::default();
+            #[cfg(not(feature = "http_client"))]
+            let loader_factory = Box::new(sophia::jsonld::loader::FileUrlLoader::default);
             #[cfg(feature = "http_client")]
-            let loader = sophia::jsonld::loader::ChainLoader::new(
-                loader,
-                sophia::jsonld::loader::HttpLoader::default(),
-            );
-            let options = options.with_document_loader(loader);
+            let loader_factory = Box::new(|| {
+                sophia::jsonld::loader::ChainLoader::new(
+                    sophia::jsonld::loader::FileUrlLoader::default(),
+                    sophia::jsonld::loader::HttpLoader::default(),
+                )
+            });
+            let options = options.with_document_loader_factory(loader_factory);
             dump_quads(input, JsonLdParser::new_with_options(options))
         }
         #[cfg(feature = "xml")]
