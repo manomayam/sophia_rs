@@ -1,6 +1,7 @@
 //! I provide impementations of [`sophia_api::term::Term`] based on [`oxrdf::Term`].
 //!
 
+use oxrdf::TryFromTermError;
 use sophia_api::{
     MownStr,
     term::{BaseDirection, BnodeId, IriRef, LanguageTag, Term, TermKind, TryFromTerm, VarName},
@@ -8,10 +9,7 @@ use sophia_api::{
 };
 use std::{borrow::Borrow, fmt::Display};
 
-use crate::{
-    TryFromTermError,
-    triple::{OxTriple, OxTripleRef},
-};
+use crate::triple::{OxTriple, OxTripleRef};
 
 /// An RDF term based on `oxrdf::Term`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -215,8 +213,36 @@ pub enum OxRdfModelError {
     NotStrictRdfTerm,
 
     /// Given term is not a valid triple term
-    #[error("Given term is not a valid triple term: {0}")]
-    InvalidTripleTerm(#[from] TryFromTermError),
+    #[error("Given term is not a valid varient at it's position in the statement: {0}")]
+    InvalidTermVarient(#[from] OxRdfTermVariantError),
+}
+
+/// An error type for term variant errors
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{term} can not be used as a {target}")]
+pub struct OxRdfTermVariantError {
+    /// The term that caused the error
+    pub term: OxTerm,
+
+    /// Intended use target
+    pub target: MownStr<'static>,
+}
+
+impl From<TryFromTermError> for OxRdfTermVariantError {
+    fn from(e: TryFromTermError) -> Self {
+        // TODO must be exposed from oxrdf instead.
+        let target = e
+            .to_string()
+            .rsplit(' ')
+            .next()
+            .expect("Must be some")
+            .to_owned()
+            .into();
+        OxRdfTermVariantError {
+            term: OxTerm(e.into_term()),
+            target,
+        }
+    }
 }
 
 /// A reference to an RDF term based on `oxrdf::TermRef`.

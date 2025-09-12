@@ -14,5 +14,3 @@ pub mod quad;
 pub mod source;
 pub mod term;
 pub mod triple;
-
-pub use oxrdf::TryFromTermError;
