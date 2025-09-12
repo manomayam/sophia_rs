@@ -7,6 +7,7 @@ members = [
     "iri",
     "isomorphism",
     "jsonld",
+    "ox",
     "resource",
     "rio",
     "sophia",
@@ -35,6 +36,7 @@ sophia_inmem = { version = "0.9.0", path = "./inmem" }
 sophia_iri = { version = "0.9.0", path = "./iri" }
 sophia_isomorphism = { version = "0.9.0", path = "./isomorphism" }
 sophia_jsonld = { version = "0.9.0", path = "./jsonld" }
+sophia_ox = { version = "0.9.0", path = "./ox" }
 sophia_resource = { version = "0.9.0", path = "./resource" }
 sophia_sparql = { version = "0.9.0", path = "./sparql" }
 sophia_sparql_client = { version = "0.9.0", path = "./sparql_client" }
@@ -50,6 +52,10 @@ lazy_static = "1.5"
 log = "0.4"
 mownstr = "0.3"
 oxiri = "0.2"
+oxrdf = { version = "0.2", features = ["rdf-star"] }
+oxrdfio = { version = "0.1", features = ["rdf-star"] }
+oxrdfxml = { version = "0.1" }
+oxttl = { version = "0.1", features = ["rdf-star"] }
 regex = "1.11"
 resiter = "0.5"
 rio_api = { version = "0.8", features = ["generalized"] }
